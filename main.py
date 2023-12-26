@@ -30,12 +30,15 @@ class TakeBreak:
         self.spam_timer.name = "og spam timer"
         self.spam_timer.start()
 
+    def start_spam(self):
+        self.spam_timer = threading.Timer(self.SESSION_DURATION * 60, self.spam)
+        self.spam_timer.name = "spam timer"
+        self.spam_timer.start()
+
     def spam(self):
         if self.school_in_session() and False:  # or if this program shouldn't be running
             # RE-ENABLE AFTER BREAK
-            self.spam_timer = threading.Timer(self.SESSION_DURATION * 60, self.spam)
-            self.spam_timer.name = "school-started spam"
-            self.spam_timer.start()
+            self.start_spam()
             return
 
         self.hibernate_thread = threading.Thread(target=self.hibernate_in, args=(1, True))
@@ -83,9 +86,7 @@ class TakeBreak:
         ic(action_id)
 
         ic("killing spam thread and auto-hibernate thread")
-        self.spam_timer.cancel()
-        self.spam_event.set()
-        self.hibernate_event.set()  # kills the auto-hibernate thread
+        self.reset()
 
         self.hibernate_thread = threading.Thread(target=self.hibernate_in, daemon=False, args=(times[action_id], False))
         self.hibernate_thread.name = "self-started hibernate thread"
@@ -103,16 +104,17 @@ class TakeBreak:
             ic(auto)
             return
 
-        self.hibernate_event.set()
-        self.spam_timer.cancel()
-        self.spam_event.set()
-
-        self.spam_timer = threading.Timer(self.SESSION_DURATION * 60, self.spam)
-        self.spam_timer.name = "post-hibernate spam timer"
-        self.spam_timer.start()
+        self.reset()
+        self.start_spam()
 
         ic("ABOUT TO HIBERNATE")
         hibernate()
+
+    def reset(self):  # called on action and right before hibernating
+        self.spam_timer.cancel()
+        self.spam_event.set()
+        self.hibernate_event.set()
+        # stops auto-hibernate thread / stops whichever thread didn't execute yet
 
     def school_in_session(self) -> bool:  # TODO: Make this static (eventually)
         now = datetime.datetime.now()
@@ -150,5 +152,10 @@ def exit_tray(icon, _):
     icon.stop()
 
 
+def get_time():
+    return f"@ {datetime.datetime.now().strftime('%X')} | "
+
+
 if __name__ == "__main__":
+    ic.configureOutput(prefix=get_time, includeContext=True)
     TakeBreak()
