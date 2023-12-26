@@ -72,8 +72,9 @@ class TakeBreak:
         template.addAction("1 minute")
         template.addAction("5 minutes")
 
-        if False and self.curr_notif is not None:
-            zroya.hide(self.curr_notif)
+        if self.curr_notif is not None:
+            pass
+            # zroya.hide(self.curr_notif)
 
         self.curr_notif = zroya.show(template, on_action=self.on_action)
 
