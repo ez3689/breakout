@@ -17,18 +17,16 @@ class TakeBreak:
     SCHOOL_END = 16
 
     def __init__(self):
-        self.make_tray()
+        self.image = path.abspath(path.join(path.dirname(__file__), "break-time.png"))
+        self.icon = self.make_tray()
 
         self.spam_event = threading.Event()
         self.hibernate_event = threading.Event()
         self.hibernate_thread = None
         self.curr_notif = None
+        self.spam_timer = None
 
-        self.spam_timer = threading.Timer(self.SESSION_DURATION * 60, self.spam)
-        # self.spam_timer = threading.Timer(1, self.spam)
-        # TODO: Replace with time.sleep?
-        self.spam_timer.name = "og spam timer"
-        self.spam_timer.start()
+        self.start_spam()
 
     def start_spam(self):
         self.spam_timer = threading.Timer(self.SESSION_DURATION * 60, self.spam)
@@ -50,8 +48,7 @@ class TakeBreak:
         self.spam_event.clear()
         # time.sleep(whatever) (this is for if Timers are replaced)
 
-        while not self.spam_event.wait(5):  # .wait() returns True when event is set
-            # todo: make sure this actually works (i think it does actually)
+        while not self.spam_event.wait(15):
             self.notify()
         ic("spam event was set")
 
@@ -67,6 +64,8 @@ class TakeBreak:
             Exception("Initialization failed")
 
         template = zroya.Template(zroya.TemplateType.ImageAndText4)
+
+        template.setImage(self.image)
 
         template.setFirstLine("Time to take a break!")
         template.setSecondLine("If you're done/not working, you must take a break now.")
@@ -116,16 +115,21 @@ class TakeBreak:
         self.hibernate_event.set()
         # stops auto-hibernate thread / stops whichever thread didn't execute yet
 
-    def school_in_session(self) -> bool:  # TODO: Make this static (eventually)
+    def disable(self):
+        self.reset()
+        threading.Timer(3600, self.start_spam).start()
+        # todo: notify
+
+    def school_in_session(self) -> bool:
         now = datetime.datetime.now()
         return now.weekday() < 5 and now.hour in range(self.SCHOOL_START, self.SCHOOL_END)
 
-    def weekend(self) -> bool:
+    @staticmethod
+    def weekend() -> bool:
         now = datetime.datetime.now()
         return now.weekday() >= 5
 
     def make_tray(self):
-        image = Image.open(path.abspath(path.join(path.dirname(__file__), "break-time.png")))
         menu = Menu(
             MenuItem(
                 "Take break",
@@ -136,20 +140,25 @@ class TakeBreak:
                 self.notify
             ),
             MenuItem(
+                "Disable",
+                self.disable
+            ),
+            MenuItem(
                 "Print threads",
                 lambda: ic(threading.enumerate())
             ),
             MenuItem(
                 'Exit',
-                exit_tray
+                self.exit_tray
             ))
 
-        tray_icon = Icon('test', image, menu=menu)
-        tray_icon.run_detached()
+        icon = Icon('test', Image.open(self.image), menu=menu)
+        icon.run_detached()
+        return icon
 
-
-def exit_tray(icon, _):
-    icon.stop()
+    def exit_tray(self):
+        self.icon.stop()
+        self.reset()
 
 
 def get_time():
