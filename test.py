@@ -7,14 +7,12 @@ event = threading.Event()
 
 
 def p():
-    global event
-    i = 0
-    while not ic(event.wait(1)):
-        i += 1
-        print(i)
+    ic()
+    ic(event.wait(60))  # it appears that event.wait behaves like a thread
 
 
 threading.Thread(target=p, daemon=False).start()
 
-time.sleep(2.5)
+threading.Timer(90, lambda: event.set()).start()
+time.sleep(90)  # also test time.sleep(20)
 event.set()

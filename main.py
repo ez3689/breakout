@@ -17,40 +17,35 @@ class TakeBreak:
     SCHOOL_END = 16
 
     def __init__(self):
+        self.disable_times = 0
+
         self.image = path.abspath(path.join(path.dirname(__file__), "break-time.png"))
         self.icon = self.make_tray()
 
-        self.spam_event = threading.Event()
         self.hibernate_event = threading.Event()
         self.hibernate_thread = None
-        self.curr_notif = None
-        self.spam_timer = None
+        self.break_timer = None
 
-        self.start_spam()
+        self.start_timer()
 
-    def start_spam(self):
-        self.spam_timer = threading.Timer(self.SESSION_DURATION * 60, self.spam)
-        self.spam_timer.name = "spam timer"
-        self.spam_timer.start()
+    def start_timer(self):
+        self.break_timer = threading.Timer(self.SESSION_DURATION * 60, self.start_break)
+        self.break_timer.name = "spam timer"
+        self.break_timer.start()
 
-    def spam(self):
-        if self.school_in_session() and False:  # or if this program shouldn't be running
-            # RE-ENABLE AFTER BREAK
-            self.start_spam()
+    def start_break(self):
+        if self.school_in_session():  # or if this program shouldn't be running
+            self.start_timer()
             return
 
         self.hibernate_thread = threading.Thread(target=self.hibernate_in, args=(1, True))
         self.hibernate_thread.name = "auto hibernate thread"
         self.hibernate_thread.start()
-
         ic("auto-hibernate thread started")
 
-        self.spam_event.clear()
-        # time.sleep(whatever) (this is for if Timers are replaced)
+        self.disable_times -= int(bool(self.disable_times))  # wow, this is stupid
 
-        while not self.spam_event.wait(15):
-            self.notify()
-        ic("spam event was set")
+        self.notify()
 
     def notify(self):
         status = zroya.init(
@@ -63,7 +58,7 @@ class TakeBreak:
         if not status:
             Exception("Initialization failed")
 
-        template = zroya.Template(zroya.TemplateType.ImageAndText4)
+        template = zroya.Template(zroya.TemplateType.ImageAndText2)
 
         template.setImage(self.image)
 
@@ -74,11 +69,13 @@ class TakeBreak:
         template.addAction("1 minute")
         template.addAction("5 minutes")
 
-        if self.curr_notif is not None:
-            pass
-            # zroya.hide(self.curr_notif)
+        zroya.show(template, on_action=self.on_action, on_dismiss=self.on_dismiss)
 
-        self.curr_notif = zroya.show(template, on_action=self.on_action)
+    def on_dismiss(self, _, reason):
+        if not (reason or self.disable_times):
+            # If user didn't dismiss toast (reason != 0) or is disabled (self.disable_times != 0)
+            #  then don't show toast
+            self.notify()  # todo: if toast expires, show another one (until hibernate)
 
     def on_action(self, _, action_id):
         times = {0: 0, 1: 1, 2: 5, 3: 10}
@@ -104,21 +101,24 @@ class TakeBreak:
             return
 
         self.reset()
-        self.start_spam()
+        self.start_timer()
 
-        ic("ABOUT TO HIBERNATE")
-        hibernate()
+        if not self.disable_times or not auto:
+            ic("ABOUT TO HIBERNATE")
+            # todo: perhaps remove "or not auto" because that means that clicking will hibernate, even if disabled
+            hibernate()
 
     def reset(self):  # called on action and right before hibernating
-        self.spam_timer.cancel()
-        self.spam_event.set()
+        self.break_timer.cancel()
         self.hibernate_event.set()
         # stops auto-hibernate thread / stops whichever thread didn't execute yet
 
-    def disable(self):
-        self.reset()
-        threading.Timer(3600, self.start_spam).start()
-        # todo: notify
+    def disable(self, times):
+        if not self.disable_times:  # == 0
+            self.disable_times = times  # prevents auto hibernate two times
+            # todo: make user be able to input on this
+        else:
+            ic(self.disable_times)
 
     def school_in_session(self) -> bool:
         now = datetime.datetime.now()
@@ -141,7 +141,7 @@ class TakeBreak:
             ),
             MenuItem(
                 "Disable",
-                self.disable
+                lambda: self.disable(2)
             ),
             MenuItem(
                 "Print threads",
