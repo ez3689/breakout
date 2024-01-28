@@ -5,6 +5,7 @@ from os import path
 import zroya
 from PIL import Image
 from icecream import ic
+from plyer import notification
 from pystray import *
 
 from hibernate import hibernate
@@ -33,7 +34,7 @@ class TakeBreak:
         self.break_timer.start()
 
     def start_break(self):
-        if self.school_in_session():  # or if this program shouldn't be running
+        if self.school_in_session:  # or if this program shouldn't be running
             self.start_timer()
             return
 
@@ -42,7 +43,7 @@ class TakeBreak:
         self.hibernate_thread.start()
         ic("auto-hibernate thread started")
 
-        self.disable_times -= int(bool(self.disable_times))  # wow, this is stupid
+        self.disable_times -= 1 if self.disable_times else 0
 
         self.notify()
 
@@ -68,7 +69,11 @@ class TakeBreak:
         template.addAction("1 minute")
         template.addAction("5 minutes")
 
-        zroya.show(template, on_action=self.on_action, on_dismiss=self.on_dismiss)
+        try:
+            zroya.show(template, on_action=self.on_action, on_dismiss=self.on_dismiss)
+        except Exception as e:
+            ic(e)
+            notification.notify(title="Zroya failed again", message="RUN.")
 
     def on_dismiss(self, _, reason):
         if not (reason or self.disable_times):
@@ -81,7 +86,7 @@ class TakeBreak:
         ic(action_id)
 
         ic("killing spam thread and auto-hibernate thread")
-        self.reset()
+        self.kill()
 
         self.hibernate_thread = threading.Thread(target=self.hibernate_in, daemon=False, args=(times[action_id], False))
         self.hibernate_thread.name = "self-started hibernate thread"
@@ -99,18 +104,23 @@ class TakeBreak:
             ic(auto)
             return
 
-        self.reset()
+        self.kill()
         self.start_timer()
 
-        if not self.disable_times or not auto:
+        if not (self.disable_times and auto):
             ic("ABOUT TO HIBERNATE")
             # todo: perhaps remove "or not auto" because that means that clicking will hibernate, even if disabled
             hibernate()
 
-    def reset(self):  # called on action and right before hibernating
+    def kill(self):
+        """Called on action, right before hibernating
+
+        Cancels spam before it starts
+
+        Cancels in-progress spam
+        :return:"""
         self.break_timer.cancel()
         self.hibernate_event.set()
-        # stops auto-hibernate thread / stops whichever thread didn't execute yet
 
     def disable(self, times):
         if not self.disable_times:  # == 0
@@ -119,12 +129,13 @@ class TakeBreak:
         else:
             ic(self.disable_times)
 
-    def school_in_session(self) -> bool:
+    @property
+    def school_in_session(self):
         now = datetime.datetime.now()
-        return now.weekday() < 5 and now.hour in range(self.SCHOOL_START, self.SCHOOL_END)
+        return not self.weekend and now.hour in range(self.SCHOOL_START, self.SCHOOL_END)
 
-    @staticmethod
-    def weekend() -> bool:
+    @property
+    def weekend(self):
         now = datetime.datetime.now()
         return now.weekday() >= 5
 
@@ -157,7 +168,7 @@ class TakeBreak:
 
     def exit_tray(self):
         self.icon.stop()
-        self.reset()
+        self.kill()
 
 
 def get_time():
