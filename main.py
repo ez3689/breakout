@@ -1,6 +1,7 @@
 import datetime
 import threading
 from os import path
+from tkinter import simpledialog
 
 import zroya
 from PIL import Image
@@ -121,10 +122,13 @@ class TakeBreak:
         self.break_timer.cancel()
         self.hibernate_event.set()
 
-    def disable(self, times):
+    def disable(self):
         if not self.disable_times:  # == 0
-            self.disable_times = times  # prevents auto hibernate two times
-            # todo: make user be able to input on this
+            times = simpledialog.askinteger("Choose break length",
+                                            "Enter the number of half hours you want to disable",
+                                            initialvalue=1, minvalue=1, maxvalue=6)
+            if times is not None:
+                self.disable_times = times
         else:
             ic(self.disable_times)
 
@@ -153,7 +157,7 @@ class TakeBreak:
             ),
             MenuItem(
                 "Disable",
-                lambda: self.disable(2)
+                self.disable
             ),
             MenuItem(
                 "Disabled during school",
