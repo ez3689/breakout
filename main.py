@@ -88,11 +88,9 @@ class TakeBreak:
         ic("killing spam thread and auto-hibernate thread")
         self.kill()
 
-        self.hibernate_thread = threading.Thread(target=self.hibernate_in, daemon=False, args=(times[action_id], False))
-        self.hibernate_thread.name = "self-started hibernate thread"
-        self.hibernate_thread.start()
-
-        ic("started hibernate thread")
+        ic("starting hibernate")
+        self.hibernate_in(times[action_id], False)
+        # fixme: make sure this works
 
     def hibernate_in(self, minutes=0, auto=True):
         self.hibernate_event.clear()
