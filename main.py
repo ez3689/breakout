@@ -18,6 +18,7 @@ class TakeBreak:
 
     def __init__(self):
         self.disable_times = 0
+        self.disabled_in_school = True
 
         self.image = path.abspath(path.join(path.dirname(__file__), "break-time.png"))
         self.icon = self.make_tray()
@@ -34,7 +35,7 @@ class TakeBreak:
         self.break_timer.start()
 
     def start_break(self):
-        if self.school_in_session:  # or if this program shouldn't be running
+        if self.school_in_session and self.disabled_in_school:  # or if this program shouldn't be running
             self.start_timer()
             return
 
@@ -127,6 +128,9 @@ class TakeBreak:
         else:
             ic(self.disable_times)
 
+    def toggle_disabled_in_school(self, _, item):
+        self.disabled_in_school = not item.checked
+
     @property
     def school_in_session(self):
         now = datetime.datetime.now()
@@ -150,6 +154,11 @@ class TakeBreak:
             MenuItem(
                 "Disable",
                 lambda: self.disable(2)
+            ),
+            MenuItem(
+                "Disabled during school",
+                self.toggle_disabled_in_school,
+                checked=lambda item: self.disabled_in_school
             ),
             MenuItem(
                 "Print threads",
