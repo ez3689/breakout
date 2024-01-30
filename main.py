@@ -12,7 +12,6 @@ from hibernate import hibernate
 
 class TakeBreak:
     SESSION_DURATION = 30
-    BREAK_DURATION = 60
     SCHOOL_START = 8
     SCHOOL_END = 16
 
@@ -96,7 +95,7 @@ class TakeBreak:
         ic(auto)
 
         if self.hibernate_event.wait(minutes * 60):
-            ic(f"Hibernate thread was killed")
+            ic("Hibernate thread was killed")
             ic(auto)
             return
 
