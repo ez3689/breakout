@@ -69,7 +69,7 @@ class TakeBreak:
 
         template.addAction("Ok")
         template.addAction("1 minute")
-        template.addAction("5 minutes")
+        template.addAction("3 minutes")
 
         try:
             zroya.show(template, on_action=self.on_action, on_dismiss=self.on_dismiss)
@@ -84,7 +84,7 @@ class TakeBreak:
             self.notify()  # todo: if toast expires, show another one (until hibernate)
 
     def on_action(self, _, action_id):
-        times = {0: 0, 1: 1, 2: 5, 3: 10}
+        times = {0: 0, 1: 1, 2: 3, 3: 5}
         ic(action_id)
 
         ic("killing spam thread and auto-hibernate thread")
