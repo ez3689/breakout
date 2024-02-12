@@ -3,7 +3,6 @@ import threading
 from os import path
 from tkinter import simpledialog
 
-import zroya
 from PIL import Image
 from icecream import ic
 from plyer import notification
@@ -47,52 +46,11 @@ class TakeBreak:
 
         self.disable_times -= 1 if self.disable_times else 0
 
-        self.notify()
+        self.send_notif()
 
-    def notify(self):
-        status = zroya.init(
-            app_name="Take Break",
-            company_name="Company name",
-            product_name="Product name",
-            sub_product="Sub-product",
-            version="version"
-        )
-        if not status:
-            Exception("Initialization failed")
-
-        template = zroya.Template(zroya.TemplateType.ImageAndText2)
-
-        template.setImage(self.image)
-
-        template.setFirstLine("Time to take a break!")
-        template.setSecondLine("If you're done/not working, you must take a break now.")
-
-        template.addAction("Ok")
-        template.addAction("1 minute")
-        template.addAction("3 minutes")
-
-        try:
-            zroya.show(template, on_action=self.on_action, on_dismiss=self.on_dismiss)
-        except Exception as e:
-            ic(e)
-            notification.notify(title="Zroya failed again", message="RUN.")
-
-    def on_dismiss(self, _, reason):
-        if not (reason or self.disable_times):
-            # If user didn't dismiss toast (reason != 0) or is disabled (self.disable_times != 0)
-            #  then don't show toast
-            self.notify()  # todo: if toast expires, show another one (until hibernate)
-
-    def on_action(self, _, action_id):
-        times = {0: 0, 1: 1, 2: 3, 3: 5}
-        ic(action_id)
-
-        ic("killing spam thread and auto-hibernate thread")
-        self.kill()
-
-        ic("starting hibernate")
-        self.hibernate_in(times[action_id], False)
-        # fixme: make sure this works
+    @staticmethod
+    def send_notif():
+        notification.notify(title="Hibernating soon!", message="Like in literally a minute")
 
     def hibernate_in(self, minutes=0, auto=True):
         self.hibernate_event.clear()
@@ -150,10 +108,6 @@ class TakeBreak:
             MenuItem(
                 "Take break",
                 lambda: self.hibernate_in(0, False),
-            ),
-            MenuItem(
-                "Take break soon",
-                self.notify
             ),
             MenuItem(
                 "Disable",
