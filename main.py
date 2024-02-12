@@ -18,6 +18,7 @@ class TakeBreak:
 
     def __init__(self):
         self.disable_times = 0
+        self.can_disable = True
         self.disabled_in_school = True
 
         self.image = path.abspath(path.join(path.dirname(__file__), "break-time.png"))
@@ -64,6 +65,7 @@ class TakeBreak:
         if not (self.disable_times and auto):
             ic("ABOUT TO HIBERNATE")
             # todo: perhaps remove "or not auto" because that means that clicking will hibernate, even if disabled
+            self.can_disable = True
             hibernate()
 
     def kill(self):
@@ -77,14 +79,13 @@ class TakeBreak:
         self.hibernate_event.set()
 
     def disable(self):
-        if not self.disable_times:  # == 0
+        if not self.disable_times and self.can_disable:  # == 0
             times = simpledialog.askinteger("Choose break length",
                                             "Enter the number of half hours you want to disable",
                                             initialvalue=1, minvalue=1, maxvalue=6)
             if times is not None:
                 self.disable_times = times
-        else:
-            ic(self.disable_times)
+                self.can_disable = False
 
     def toggle_disabled_in_school(self, _, item):
         self.disabled_in_school = not item.checked
