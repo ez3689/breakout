@@ -63,12 +63,6 @@ class TakeBreak:
             hibernate()
 
     def kill(self):
-        """Called on action, right before hibernating
-
-        Cancels spam before it starts
-
-        Cancels in-progress spam
-        :return:"""
         self.break_event.set()
         self.hibernate_event.set()
 
