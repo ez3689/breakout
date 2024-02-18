@@ -25,6 +25,7 @@ class TakeBreak:
         self.icon = self.make_tray()
 
         self.hibernate_event = threading.Event()
+        self.auto_hibernate_event = threading.Event()
         self.break_event = threading.Event()
 
         self.start_break()
@@ -39,32 +40,31 @@ class TakeBreak:
 
         self.disable_times -= 1 if self.disable_times else 0
 
-        notification.notify(title="Hibernating soon!", message="Like in literally a minute")
-
         self.hibernate_in(1, True)
 
-    def hibernate_in(self, minutes=0, auto=True):
-        self.hibernate_event.clear()
-        ic("waiting to hibernate...")
-        ic(auto)
+    def hibernate_in(self, minutes, auto=False):
+        notification.notify(title="Hibernating soon!", message=f"In {minutes} minute(s)")
 
-        if self.hibernate_event.wait(minutes * 60):
-            ic("Hibernate thread was killed")
-            ic(auto)
+        event = self.auto_hibernate_event if auto else self.hibernate_event
+
+        if not auto:
+            self.auto_hibernate_event.set()
+
+        event.clear()
+        if event.wait(minutes * 60):
             return
 
         self.kill()
+        threading.Thread(target=self.start_break).start()  # todo: create function that runs (only) this
 
         if not (self.disable_times and auto):
-            ic("ABOUT TO HIBERNATE")
-            # todo: perhaps remove "or not auto" because that means that clicking will hibernate, even if disabled
             self.can_disable = True
-            threading.Thread(target=self.start_break).start()  # todo: create function that runs (only) this
             hibernate()
 
     def kill(self):
-        self.break_event.set()
         self.hibernate_event.set()
+        self.auto_hibernate_event.set()
+        self.break_event.set()
 
     def disable(self):
         if not self.disable_times and self.can_disable:  # == 0
