@@ -91,8 +91,15 @@ class TakeBreak:
     def make_tray(self):
         menu = Menu(
             MenuItem(
-                "Take break",
-                lambda: self.hibernate_in(0, False),
+                "Take break in...",
+                Menu(
+                    *[
+                        MenuItem(
+                            f"{m} minutes",
+                            threading.Thread(target=self.hibernate_in, args=[m]).start
+                        ) for m in [0, 1, 3]
+                    ]
+                ),
             ),
             MenuItem(
                 "Disable",
