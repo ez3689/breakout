@@ -39,14 +39,10 @@ class TakeBreak:
             self.start_timer()
             return
 
-        self.hibernate_thread = threading.Thread(target=self.hibernate_in, args=(1, True))
-        self.hibernate_thread.name = "auto hibernate thread"
-        self.hibernate_thread.start()
-        ic("auto-hibernate thread started")
-
         self.disable_times -= 1 if self.disable_times else 0
 
         self.send_notif()
+        self.hibernate_in(1, True)
 
     @staticmethod
     def send_notif():
