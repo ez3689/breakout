@@ -40,9 +40,9 @@ class TakeBreak:
 
         self.disable_times -= 1 if self.disable_times else 0
 
-        self.hibernate_in(1, True)
+        self.begin_break(1, True)
 
-    def hibernate_in(self, minutes, auto=False):
+    def begin_break(self, minutes, auto=False):
         notification.notify(title="Hibernating soon!", message=f"In {minutes} minute(s)")
 
         event = self.auto_hibernate_event if auto else self.hibernate_event
@@ -96,7 +96,7 @@ class TakeBreak:
                     *[
                         MenuItem(
                             f"{m} minutes",
-                            threading.Thread(target=self.hibernate_in, args=[m]).start
+                            threading.Thread(target=self.begin_break, args=[m]).start
                         ) for m in [0, 1, 3]
                     ]
                 ),
