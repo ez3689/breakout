@@ -25,29 +25,23 @@ class TakeBreak:
         self.icon = self.make_tray()
 
         self.hibernate_event = threading.Event()
-        self.hibernate_thread = None
-        self.break_timer = None
+        self.break_event = threading.Event()
 
-        self.start_timer()
-
-    def start_timer(self):
-        self.break_timer = threading.Timer(self.SESSION_DURATION * 60, self.start_break)
-        self.break_timer.name = "spam timer"
-        self.break_timer.start()
+        self.start_break()
 
     def start_break(self):
-        if self.school_in_session and self.disabled_in_school:  # or if this program shouldn't be running
-            self.start_timer()
+        self.break_event.clear()
+        was_set = self.break_event.wait(self.SESSION_DURATION * 60)
+
+        if was_set or (self.school_in_session and self.disabled_in_school):  # or if it shouldn't be running
+            threading.Thread(target=self.start_break).start()
             return
 
         self.disable_times -= 1 if self.disable_times else 0
 
-        self.send_notif()
-        self.hibernate_in(1, True)
-
-    @staticmethod
-    def send_notif():
         notification.notify(title="Hibernating soon!", message="Like in literally a minute")
+
+        self.hibernate_in(1, True)
 
     def hibernate_in(self, minutes=0, auto=True):
         self.hibernate_event.clear()
@@ -60,12 +54,12 @@ class TakeBreak:
             return
 
         self.kill()
-        self.start_timer()
 
         if not (self.disable_times and auto):
             ic("ABOUT TO HIBERNATE")
             # todo: perhaps remove "or not auto" because that means that clicking will hibernate, even if disabled
             self.can_disable = True
+            threading.Thread(target=self.start_break).start()  # todo: create function that runs (only) this
             hibernate()
 
     def kill(self):
@@ -75,7 +69,7 @@ class TakeBreak:
 
         Cancels in-progress spam
         :return:"""
-        self.break_timer.cancel()
+        self.break_event.set()
         self.hibernate_event.set()
 
     def disable(self):
