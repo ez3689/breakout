@@ -43,12 +43,15 @@ class TakeBreak:
 
         self.start_break()
 
+    def start_break_thread(self):
+        threading.Thread(target=self.start_break).start()
+
     def start_break(self):
         self.break_event.clear()
         was_set = self.break_event.wait(self.SESSION_DURATION * 60)
 
         if was_set or (self.school_in_session and self.disabled_in_school):  # or if it shouldn't be running
-            threading.Thread(target=self.start_break).start()
+            self.start_break_thread()
             return
 
         self.disable_times -= 1 if self.disable_times else 0
@@ -80,7 +83,7 @@ class TakeBreak:
             notification.notify(title="Break over!", message="Back to work!")
 
         self.can_disable = True
-        threading.Thread(target=self.start_break).start()
+        self.start_break_thread()
 
     def on_input(self, *_):
         self.input_event.set()
