@@ -3,6 +3,7 @@ import threading
 from os import path
 from tkinter import simpledialog
 
+import pynput
 from PIL import Image
 from icecream import ic
 from plyer import notification
@@ -13,6 +14,7 @@ from hibernate import hibernate
 
 class TakeBreak:
     SESSION_DURATION = 30
+    BREAK_LENGTH = 60
     SCHOOL_START = 8
     SCHOOL_END = 16
 
@@ -27,6 +29,17 @@ class TakeBreak:
         self.hibernate_event = threading.Event()
         self.auto_hibernate_event = threading.Event()
         self.break_event = threading.Event()
+        self.input_event = threading.Event()
+
+        self.mouse_listener = pynput.mouse.Listener(
+            on_click=self.on_input, on_scroll=self.on_input
+        )
+        self.keyboard_listener = pynput.keyboard.Listener(
+            on_press=self.on_input, on_release=self.on_input
+        )
+
+        self.mouse_listener.start()
+        self.keyboard_listener.start()
 
         self.start_break()
 
@@ -43,7 +56,7 @@ class TakeBreak:
         self.begin_break(1, True)
 
     def begin_break(self, minutes, auto=False):
-        notification.notify(title="Hibernating soon!", message=f"In {minutes} minute(s)")
+        notification.notify(title="Break starting soon!", message=f"In {minutes} minute(s)")
 
         event = self.auto_hibernate_event if auto else self.hibernate_event
 
@@ -55,16 +68,28 @@ class TakeBreak:
             return
 
         self.kill()
-        threading.Thread(target=self.start_break).start()  # todo: create function that runs (only) this
 
-        if not (self.disable_times and auto):
-            self.can_disable = True
+        notification.notify(title="Break in progress!", message="Don't move a muscle.")
+        threading.Timer(5, self.wait).start()
+
+    def wait(self):
+        self.input_event.clear()
+        if self.input_event.wait(self.BREAK_LENGTH) and not self.disable_times:
             hibernate()
+        else:
+            notification.notify(title="Break over!", message="Back to work!")
+
+        self.can_disable = True
+        threading.Thread(target=self.start_break).start()
+
+    def on_input(self, *_):
+        self.input_event.set()
 
     def kill(self):
         self.hibernate_event.set()
         self.auto_hibernate_event.set()
         self.break_event.set()
+        self.input_event.set()
 
     def disable(self):
         if not self.disable_times and self.can_disable:  # == 0
@@ -126,6 +151,8 @@ class TakeBreak:
     def exit_tray(self):
         self.icon.stop()
         self.kill()
+        self.mouse_listener.stop()
+        self.keyboard_listener.stop()
 
 
 def get_time():
